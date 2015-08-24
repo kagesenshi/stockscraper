@@ -4,6 +4,7 @@ import json
 from urlparse import urljoin
 import time
 import hashlib
+import re
 from selenium.common.exceptions import StaleElementReferenceException
 
 class Row(scrapy.Item):
@@ -116,7 +117,10 @@ class BlogSpider(scrapy.Spider):
             '#MainContent_lbContact'
         )[0].text.replace(": ","").strip()
 
-
+        try:
+            securityCode = re.match(".*\((.*?)\)", ": CAB (7174)").groups()[0]
+        except:
+            securityCode = None
 
         headers = [
             'Date',
@@ -152,7 +156,8 @@ class BlogSpider(scrapy.Spider):
                 'Website': website,
                 'Symbol': symbol,
                 'Industry': industry,
-                'Contact': contact
+                'Contact': contact,
+                'SecurityCode': securityCode
             }
             if tr.get_attribute("class") == "pgr":
                 continue
