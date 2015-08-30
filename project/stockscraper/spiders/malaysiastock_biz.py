@@ -2,12 +2,14 @@ import scrapy
 from scrapy_webdriver.http import WebdriverRequest
 import json
 from urlparse import urljoin
+import datetime
 import time
 import hashlib
 import re
 from selenium.common.exceptions import StaleElementReferenceException
 
 class Row(scrapy.Item):
+    _ScrapeDT = scrapy.Field()
     Company = scrapy.Field()
     Website = scrapy.Field()
     Symbol = scrapy.Field()
@@ -15,7 +17,7 @@ class Row(scrapy.Item):
     Contact = scrapy.Field()
     Date = scrapy.Field()
     FinancialYear = scrapy.Field()
-    No = scrapy.Field()
+    Quarter = scrapy.Field()
     FinancialQuarter = scrapy.Field()
     Revenue = scrapy.Field()
     ProfitBeforeTax = scrapy.Field()
@@ -23,7 +25,10 @@ class Row(scrapy.Item):
     EarningPerShare = scrapy.Field()
     Dividend = scrapy.Field()
     NTA = scrapy.Field()
-    Download = scrapy.Field()
+#    Download = scrapy.Field()
+    SecurityCode = scrapy.Field()
+    SymbolCode = scrapy.Field()
+
 
 
 class BlogSpider(scrapy.Spider):
@@ -118,14 +123,15 @@ class BlogSpider(scrapy.Spider):
         )[0].text.replace(": ","").strip()
 
         try:
-            securityCode = re.match(".*\((.*?)\)", ": CAB (7174)").groups()[0]
+            symbolCode, securityCode = re.match("(.*)\((.*?)\)", symbol
+                    ).groups()[:2]
         except:
-            securityCode = None
+            symbolCode, securityCode = None
 
         headers = [
             'Date',
             'FinancialYear',
-            'No',
+            'Quarter',
             'FinancialQuarter',
             'Revenue',
             'ProfitBeforeTax',
@@ -139,7 +145,7 @@ class BlogSpider(scrapy.Spider):
         schema = {
             'Date': lambda x:x,
             'FinancialYear': lambda x:x,
-            'No': lambda x: int(x),
+            'Quarter': lambda x: int(x),
             'FinancialQuarter': lambda x:x,
             'Revenue': lambda x: int(x.replace(',','')) * 1000,
             'ProfitBeforeTax': lambda x: int(x.replace(',','')) * 1000,
@@ -149,24 +155,29 @@ class BlogSpider(scrapy.Spider):
             'NTA': lambda x: float(x),
             'Download': lambda x: None
         }
-
+        dt = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
         for tr in data_els:
-            out = {
+            out = {}
+            c = {
+                '_ScrapeDT': dt,
                 'Company': company,
                 'Website': website,
                 'Symbol': symbol,
                 'Industry': industry,
                 'Contact': contact,
-                'SecurityCode': securityCode
+                'SecurityCode': securityCode,
+                'SymbolCode': symbolCode
             }
             if tr.get_attribute("class") == "pgr":
                 continue
-
+            
             for idx, td in enumerate(self._css(tr, "td")):
                 k = headers[idx]
                 v = schema[k](td.text.strip())
                 out[k] = v
             if out:
+                del out['Download']
+                out.update(c)
                 yield Row(out)
 
 
