@@ -1,0 +1,5 @@
+- scrape shareholding information from
+  http://www.klse.my/stock/insider/substantialShareholder/all/<SecurityCode>.jsp
+
+- scrape last 10 financial year data
+  http://www.klse.my/stock/result/financial/last10fy/<SecurityCode>.jsp
